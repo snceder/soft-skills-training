@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>StreamLoop Retention Escalation & De-Escalation Card</title>
+<style>
+  :root{
+    --sl-bg:#2B2B2F;
+    --sl-panel:#35353B;
+    --sl-panel-hover:#3E3E45;
+    --sl-coral:#FF6F59;
+    --sl-coral-dim:#E85F4C;
+    --sl-text:#F4F4F5;
+    --sl-text-dim:#B7B7BE;
+    --sl-border:#46464E;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    background:#1c1c1f;
+    padding:32px;
+    display:flex;
+    justify-content:center;
+  }
+  .kb-shell{
+    width:100%;
+    max-width:760px;
+  }
+  .kb-breadcrumb{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:12px;
+    color:#8b8b93;
+    margin-bottom:10px;
+    padding:0 4px;
+  }
+  .kb-breadcrumb .dot{color:#5a5a62;}
+  .kb-meta-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:14px;
+    padding:0 4px;
+  }
+  .kb-version-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:.03em;
+    color:#8FE3A1;
+    background:rgba(143,227,161,0.1);
+    border:1px solid rgba(143,227,161,0.25);
+    padding:4px 10px;
+    border-radius:20px;
+  }
+  .kb-version-pill .pulse{
+    width:6px;height:6px;border-radius:50%;
+    background:#8FE3A1;
+    box-shadow:0 0 0 0 rgba(143,227,161,.5);
+    animation:pulse 2s infinite;
+  }
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(143,227,161,.45);}
+    70%{box-shadow:0 0 0 6px rgba(143,227,161,0);}
+    100%{box-shadow:0 0 0 0 rgba(143,227,161,0);}
+  }
+  .kb-card{
+    background:var(--sl-bg);
+    border:1px solid var(--sl-border);
+    border-radius:16px;
+    overflow:hidden;
+    box-shadow:0 20px 50px rgba(0,0,0,.35);
+  }
+  .kb-header{
+    padding:22px 24px 20px;
+    border-bottom:1px solid var(--sl-border);
+  }
+  .kb-header h1{
+    margin:0 0 4px;
+    font-size:19px;
+    font-weight:700;
+    color:var(--sl-text);
+    letter-spacing:-0.01em;
+  }
+  .kb-header p{
+    margin:0;
+    font-size:13px;
+    color:var(--sl-text-dim);
+  }
+  .kb-section{
+    padding:20px 24px;
+    border-bottom:1px solid var(--sl-border);
+  }
+  .kb-section:last-child{border-bottom:none;}
+  .kb-section-label{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--sl-coral);
+    margin-bottom:14px;
+  }
+  .kb-section-sub{
+    font-size:12.5px;
+    color:var(--sl-text-dim);
+    margin:-8px 0 16px;
+  }
+  .pan-grid{
+    display:grid;
+    gap:10px;
+  }
+  .pan-item{
+    background:var(--sl-panel);
+    border:1px solid var(--sl-border);
+    border-radius:10px;
+    padding:12px 14px;
+    display:flex;
+    gap:12px;
+    align-items:flex-start;
+  }
+  .pan-letter{
+    flex:0 0 auto;
+    width:26px;
+    height:26px;
+    border-radius:7px;
+    background:rgba(255,111,89,0.15);
+    color:var(--sl-coral);
+    font-size:13px;
+    font-weight:700;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .pan-body strong{
+    display:block;
+    font-size:12.5px;
+    color:var(--sl-text);
+    margin-bottom:2px;
+  }
+  .pan-body span{
+    font-size:13px;
+    color:var(--sl-text-dim);
+    line-height:1.45;
+  }
+  .accordion{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .acc-item{
+    background:var(--sl-panel);
+    border:1px solid var(--sl-border);
+    border-radius:10px;
+    overflow:hidden;
+  }
+  .acc-trigger{
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    background:none;
+    border:none;
+    padding:13px 14px;
+    cursor:pointer;
+    color:var(--sl-text);
+    font-size:14px;
+    font-weight:600;
+    text-align:left;
+    font-family:inherit;
+  }
+  .acc-trigger:hover{background:var(--sl-panel-hover);}
+  .acc-trigger .tag{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .acc-trigger .chev{
+    color:var(--sl-text-dim);
+    transition:transform .18s ease;
+    font-size:12px;
+  }
+  .acc-item.open .acc-trigger .chev{transform:rotate(180deg);color:var(--sl-coral);}
+  .acc-panel{
+    max-height:0;
+    overflow:hidden;
+    transition:max-height .22s ease;
+  }
+  .acc-item.open .acc-panel{max-height:400px;}
+  .acc-panel-inner{
+    padding:2px 14px 16px;
+    display:grid;
+    gap:10px;
+  }
+  .field{
+    background:#2E2E33;
+    border:1px solid var(--sl-border);
+    border-radius:8px;
+    padding:10px 12px;
+  }
+  .field-label{
+    font-size:10.5px;
+    font-weight:700;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--sl-text-dim);
+    margin-bottom:4px;
+  }
+  .field-value{
+    font-size:13px;
+    color:var(--sl-text);
+    line-height:1.4;
+  }
+  .field-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .copy-btn{
+    flex:0 0 auto;
+    background:transparent;
+    border:1px solid var(--sl-border);
+    color:var(--sl-text-dim);
+    font-size:11px;
+    font-weight:600;
+    padding:5px 10px;
+    border-radius:6px;
+    cursor:pointer;
+    font-family:inherit;
+    transition:all .15s ease;
+  }
+  .copy-btn:hover{border-color:var(--sl-coral);color:var(--sl-coral);}
+  .copy-btn.copied{border-color:#8FE3A1;color:#8FE3A1;}
+  .kb-footer{
+    padding:14px 24px;
+    background:#242427;
+    font-size:11.5px;
+    color:#75757c;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+</style>
+</head>
+<body>
+
+<div class="kb-shell">
+  <div class="kb-breadcrumb">
+    <span>Knowledge Base</span><span class="dot">/</span><span>Retention</span><span class="dot">/</span><span>Escalation &amp; De-Escalation</span>
+  </div>
+  <div class="kb-meta-row">
+    <span class="kb-version-pill"><span class="pulse"></span>LIVE &middot; V3.2</span>
+    <span style="font-size:12px;color:#8b8b93;">Last synced just now</span>
+  </div>
+
+  <div class="kb-card">
+    <div class="kb-header">
+      <h1>Retention Escalation &amp; De-Escalation Card</h1>
+      <p>Pinned point-of-work reference. Keep open alongside the CRM during live cancellation calls.</p>
+    </div>
+
+    <div class="kb-section">
+      <div class="kb-section-label">Step 1 &middot; Always Visible</div>
+      <div class="kb-section-sub">The P.A.N. framework. Use on every cancellation call before jumping to a save offer.</div>
+      <div class="pan-grid">
+        <div class="pan-item">
+          <div class="pan-letter">P</div>
+          <div class="pan-body">
+            <strong>Paraphrase</strong>
+            <span>"What I'm hearing is that [core issue], and you're looking at what options make sense for your account today."</span>
+          </div>
+        </div>
+        <div class="pan-item">
+          <div class="pan-letter">A</div>
+          <div class="pan-body">
+            <strong>Ask</strong>
+            <span>"To make sure I address the right thing, is this mainly about price, feature use, or a technical issue, or something else?"</span>
+          </div>
+        </div>
+        <div class="pan-item">
+          <div class="pan-letter">N</div>
+          <div class="pan-body">
+            <strong>Name Emotion</strong>
+            <span>"I understand how frustrating it is when [pain point]. Let's look at how to fix this right now."</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kb-section">
+      <div class="kb-section-label">Step 2 &middot; Select Root Cause</div>
+      <div class="kb-section-sub">Tap the reason the customer gave. Each tab has the exact offer and CRM path, no digging required.</div>
+      <div class="accordion" id="accordion">
+
+        <div class="acc-item" data-item>
+          <button class="acc-trigger" data-trigger>
+            <span class="tag">Price / Budget</span>
+            <span class="chev">&#9660;</span>
+          </button>
+          <div class="acc-panel">
+            <div class="acc-panel-inner">
+              <div class="field">
+                <div class="field-label">Acknowledge &amp; Probe</div>
+                <div class="field-value">"I know keeping software costs manageable matters right now."</div>
+              </div>
+              <div class="field">
+                <div class="field-label">Approved Offer</div>
+                <div class="field-value">Tier-2 billing discount, 30% off for 3 months, or downgrade to the Starter plan.</div>
+              </div>
+              <div class="field">
+                <div class="field-row">
+                  <div>
+                    <div class="field-label">CRM Action Path</div>
+                    <div class="field-value">Billing Portal &rarr; Subscription &rarr; Apply code RETENTION_30_Q3</div>
+                  </div>
+                  <button class="copy-btn" data-copy="RETENTION_30_Q3">Copy code</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="acc-item" data-item>
+          <button class="acc-trigger" data-trigger>
+            <span class="tag">Technical Friction</span>
+            <span class="chev">&#9660;</span>
+          </button>
+          <div class="acc-panel">
+            <div class="acc-panel-inner">
+              <div class="field">
+                <div class="field-label">Acknowledge &amp; Probe</div>
+                <div class="field-value">"Running into blockers when you're trying to get work done isn't acceptable."</div>
+              </div>
+              <div class="field">
+                <div class="field-label">Approved Offer</div>
+                <div class="field-value">Tier-3 engineering escalation plus a one-month service credit.</div>
+              </div>
+              <div class="field">
+                <div class="field-row">
+                  <div>
+                    <div class="field-label">CRM Action Path</div>
+                    <div class="field-value">Support Desk &rarr; Escalations &rarr; Priority Bug Concierge</div>
+                  </div>
+                  <button class="copy-btn" data-copy="Support Desk > Escalations > Priority Bug Concierge">Copy path</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="acc-item" data-item>
+          <button class="acc-trigger" data-trigger>
+            <span class="tag">Competitor Switch</span>
+            <span class="chev">&#9660;</span>
+          </button>
+          <div class="acc-panel">
+            <div class="acc-panel-inner">
+              <div class="field">
+                <div class="field-label">Acknowledge &amp; Probe</div>
+                <div class="field-value">"I want to make sure you have the functionality you actually need."</div>
+              </div>
+              <div class="field">
+                <div class="field-label">Approved Offer</div>
+                <div class="field-value">Complimentary 1:1 feature strategy session, plus early beta access.</div>
+              </div>
+              <div class="field">
+                <div class="field-row">
+                  <div>
+                    <div class="field-label">CRM Action Path</div>
+                    <div class="field-value">Account Overview &rarr; Add-Ons &rarr; Schedule Product VIP Session</div>
+                  </div>
+                  <button class="copy-btn" data-copy="Account Overview > Add-Ons > Schedule Product VIP Session">Copy path</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="kb-footer">
+      <span>StreamLoop Internal Knowledge Base</span>
+      <span>Owner: Retention Ops</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('[data-trigger]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const item = btn.closest('[data-item]');
+      const wasOpen = item.classList.contains('open');
+      document.querySelectorAll('[data-item]').forEach(i=>i.classList.remove('open'));
+      if(!wasOpen) item.classList.add('open');
+    });
+  });
+  document.querySelectorAll('[data-copy]').forEach(btn=>{
+    btn.addEventListener('click',(e)=>{
+      e.stopPropagation();
+      const text = btn.getAttribute('data-copy');
+      navigator.clipboard && navigator.clipboard.writeText(text).catch(()=>{});
+      const original = btn.textContent;
+      btn.textContent = 'Copied';
+      btn.classList.add('copied');
+      setTimeout(()=>{btn.textContent = original; btn.classList.remove('copied');},1400);
+    });
+  });
+  // open first tab by default for the screenshot/demo view
+  document.querySelector('[data-item]').classList.add('open');
+</script>
+
+</body>
+</html>
